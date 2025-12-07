@@ -22,7 +22,7 @@ const verifyFBToken = async (req, res, next) => {
     if (!authorization) {
         res.status(401).send({ message: 'unAuthorized Access' })
     }
-    
+
     const token = authorization.split(' ')[1]
     if (!token) {
         res.status(401).send({ message: 'unAuthorized Access' })
@@ -45,7 +45,7 @@ app.get('/', (req, res) => {
 })
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = process.env.URI;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -63,18 +63,16 @@ async function run() {
         await client.connect();
 
         const StyleDecor = client.db('StyleDecor');
-        const usersColl = StyleDecor.collection('users')
+        const usersColl = StyleDecor.collection('users');
+        const serviceColl = StyleDecor.collection('services')
 
         // apis here 
+
+        //--------user Related apis--------
         // add user role 
-        app.post('/users', verifyFBToken, async (req, res) => {
+        app.post('/users', async (req, res) => {
             const user = req.body;
-            const { email } = user
-            if (email) {
-                if (email !== req.token_email){
-                    return res.status(403).send({message:"forbidden access"})
-                }
-            }
+            console.log(user);
             const isExist = await usersColl.findOne({ email: user?.email })
             if (isExist) {
                 res.send({ message: "user already exist" })
@@ -86,11 +84,68 @@ async function run() {
         })
 
         // get User role 
-        app.get('/users', verifyFBToken, async (req, res) => {
+        app.get('/users', async (req, res) => {
 
             const result = await usersColl.find().toArray();
             res.send(result)
         })
+
+        //get a single user
+        app.get('/users/:id', async (req, res) => {
+            const { id } = req.params;
+            const result = await usersColl.findOne({ _id: new ObjectId(id) })
+            res.send(result)
+        })
+
+        //update user role
+        app.patch('/users/:id', async (req, res) => {
+            const { id } = req.params;
+            const role = req.body;
+            const update = {
+                $set: role
+            }
+            const result = await usersColl.updateOne({ _id: new ObjectId(id) }, update);
+            res.send(result)
+        })
+
+        //--------servie Related apis--------
+        //get all services
+        app.get('/services', async (req, res) => {
+            const result = await serviceColl.find().toArray()
+            res.send(result)
+        })
+
+        //get a single service
+        app.get('/services/:id', async (req, res) => {
+            const { id } = req.params;
+            const result = await serviceColl.findOne({ _id: new ObjectId(id) })
+            res.send(result)
+        })
+
+        // post a serviec 
+        app.post('/services', async (req, res) => {
+            const serviec = req.body;
+            const result = await serviceColl.insertOne(serviec);
+            res.send(result)
+        })
+        //update a service
+        app.patch('/services/:id', async (req, res) => {
+            const { id } = req.params;
+            const updateInfo = req.body;
+            const update = {
+                $set: updateInfo
+            }
+            const result = await serviceColl.updateOne({ _id: new ObjectId(id) }, update);
+            res.send(result)
+        })
+
+        //delete a servies
+        app.delete('/services/:id', async (req, res) => {
+            const { id } = req.params;
+            const result = await serviceColl.deleteOne({ _id: new ObjectId(id) })
+            res.send(result)
+        })
+
 
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
