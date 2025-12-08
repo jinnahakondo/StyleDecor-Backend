@@ -65,6 +65,7 @@ async function run() {
         const StyleDecor = client.db('StyleDecor');
         const usersColl = StyleDecor.collection('users');
         const serviceColl = StyleDecor.collection('services')
+        const decoratorColl = StyleDecor.collection('decorators')
 
         // apis here 
 
@@ -143,6 +144,12 @@ async function run() {
         app.delete('/services/:id', async (req, res) => {
             const { id } = req.params;
             const result = await serviceColl.deleteOne({ _id: new ObjectId(id) })
+            res.send(result)
+        })
+
+        //get all decorators
+        app.get('/decorators', async (req, res) => {
+            const result = await decoratorColl.find().toArray();
             res.send(result)
         })
 
