@@ -66,6 +66,7 @@ async function run() {
         const usersColl = StyleDecor.collection('users');
         const serviceColl = StyleDecor.collection('services')
         const decoratorColl = StyleDecor.collection('decorators')
+        const bookingColl = StyleDecor.collection('bookings')
 
         // apis here 
 
@@ -153,6 +154,12 @@ async function run() {
             res.send(result)
         })
 
+        //add booking in bookings
+        app.post('/bookings', async (req, res) => {
+            const booking = req.body;
+            const result = await bookingColl.insertOne(booking);
+            res.send(result)
+        })
 
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
