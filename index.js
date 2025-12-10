@@ -93,9 +93,9 @@ async function run() {
         })
 
         //get a single user
-        app.get('/users/:id', async (req, res) => {
-            const { id } = req.params;
-            const result = await usersColl.findOne({ _id: new ObjectId(id) })
+        app.get('/users/:email', async (req, res) => {
+            const { email } = req.params;
+            const result = await usersColl.findOne({ email: email })
             res.send(result)
         })
 
@@ -148,9 +148,17 @@ async function run() {
             res.send(result)
         })
 
+        //--------decorators Related apis--------
         //get all decorators
         app.get('/decorators', async (req, res) => {
             const result = await decoratorColl.find().toArray();
+            res.send(result)
+        })
+
+        //--------bookings Related apis--------
+        //get bookings
+        app.get('/bookings', async (req, res) => {
+            const result = await bookingColl.find().toArray()
             res.send(result)
         })
 
@@ -160,6 +168,8 @@ async function run() {
             const result = await bookingColl.insertOne(booking);
             res.send(result)
         })
+
+
 
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
