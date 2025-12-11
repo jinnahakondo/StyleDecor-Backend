@@ -77,6 +77,7 @@ async function run() {
         const serviceColl = StyleDecor.collection('services')
         const decoratorColl = StyleDecor.collection('decorators')
         const bookingColl = StyleDecor.collection('bookings')
+        const paymentColl = StyleDecor.collection('payments')
 
         // apis here 
 
@@ -194,7 +195,8 @@ async function run() {
             res.send(result)
         })
 
-        //PAYMENT RELATED APIS 
+        //--------PAYMENT RELATED APIS--------
+        // checkout session 
         app.post('/create-checkout-session', async (req, res) => {
             const serviceInfo = req.body;
             const amount = Number(serviceInfo.price) * 100;
@@ -217,6 +219,7 @@ async function run() {
 
                 ],
                 metadata: {
+                    serviceName: serviceInfo?.title,
                     serviceId: serviceInfo._id,
                     trakingId: serviceInfo.trakingId
                 },
@@ -228,6 +231,54 @@ async function run() {
             res.send(session.url)
         })
 
+        // payment success 
+        app.patch('/payment-success', async (req, res) => {
+            const { sessionId } = req.body;
+            const session = await stripe.checkout.sessions.retrieve(sessionId);
+            const trackingId = session.metadata.trakingId;
+            const transectionId = session.payment_intent;
+
+            // check that is already paid?
+            const alreadyPaid = await paymentColl.findOne({ transectionId })
+            if (alreadyPaid) {
+                return res.send({ status: "already paid" })
+            }
+            if (session.payment_status === 'paid') {
+                const serviceId = session.metadata.serviceId;
+                const update = {
+                    $set: {
+                        transectionId,
+                        paymentStatus: 'paid',
+                        paid_at: new Date(),
+                    }
+                }
+
+                const serviceUpdateResult = await bookingColl.updateOne({ _id: new ObjectId(serviceId) }, update)
+                console.log(serviceUpdateResult);
+
+                //payments info
+                const paymentInfo = {
+                    amount: session.amount_total / 100,
+                    currency: session.currency,
+                    customerEmail: session.customer_email,
+                    serviceId: session.metadata.serviceId,
+                    serviceName: session.metadata.serviceName,
+                    transectionId: session.payment_intent,
+                    paymentStatus: session.payment_status,
+                    paidAt: new Date()
+                }
+                const paymentRes = await paymentColl.insertOne(paymentInfo)
+
+                res.send({ serviceUpdateResult, paymentRes })
+            }
+        })
+
+        //payment history
+        app.get('/payment-history/:email', async (req, res) => {
+            const { email } = req.params;
+            const result = await paymentColl.find({ customerEmail: email }).toArray()
+            res.send(result)
+        })
 
 
         await client.db("admin").command({ ping: 1 });
