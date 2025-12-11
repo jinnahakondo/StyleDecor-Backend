@@ -197,7 +197,7 @@ async function run() {
         //PAYMENT RELATED APIS 
         app.post('/create-checkout-session', async (req, res) => {
             const serviceInfo = req.body;
-            const amount = Number(serviceInfo.servicePrice) * 100;
+            const amount = Number(serviceInfo.price) * 100;
 
             const session = await stripe.checkout.sessions.create({
                 line_items: [
@@ -206,8 +206,9 @@ async function run() {
                             currency: 'usd',
                             unit_amount: amount,
                             product_data: {
-                                name: serviceInfo?.serviceName,
-                                images: [serviceInfo?.serviceImage]
+                                name: serviceInfo?.title,
+                                description: serviceInfo.description,
+                                images: [serviceInfo?.image]
 
                             },
                         },
@@ -221,7 +222,7 @@ async function run() {
                 },
                 mode: 'payment',
                 customer_email: serviceInfo.customerEmail,
-                success_url: `${process.env.STYLEDECOR_DOMAIN}/dashboard/payment-success`,
+                success_url: `${process.env.STYLEDECOR_DOMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${process.env.STYLEDECOR_DOMAIN}/dashboard/my-bookings`
             })
             res.send(session.url)
