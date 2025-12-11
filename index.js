@@ -1,9 +1,11 @@
 const express = require('express')
 require('dotenv').config();
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+const app = express()
 
 // middleWares 
 const cors = require('cors')
-const app = express()
 app.use(cors())
 app.use(express.json())
 
@@ -14,6 +16,14 @@ const serviceAccount = require("./styledecor-firebase-adminsdk.json");
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
 });
+
+
+// traking id generate 
+function generateTrackingId() {
+    const time = Date.now();
+    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `STR-${time}-${rand}`;
+}
 
 
 const verifyFBToken = async (req, res, next) => {
@@ -162,11 +172,59 @@ async function run() {
             res.send(result)
         })
 
+        //get a single bookings
+        app.get('/bookings/:email', async (req, res) => {
+            const { email } = req.params;
+            const result = await bookingColl.find({ customerEmail: email }).toArray()
+            res.send(result)
+        })
+
         //add booking in bookings
         app.post('/bookings', async (req, res) => {
             const booking = req.body;
+            booking.trakingId = generateTrackingId();
             const result = await bookingColl.insertOne(booking);
             res.send(result)
+        })
+
+        //delete a single booking
+        app.delete('/bookings/delete/:id', async (req, res) => {
+            const { id } = req.params;
+            const result = await bookingColl.deleteOne({ _id: new ObjectId(id) })
+            res.send(result)
+        })
+
+        //PAYMENT RELATED APIS 
+        app.post('/create-checkout-session', async (req, res) => {
+            const serviceInfo = req.body;
+            const amount = Number(serviceInfo.servicePrice) * 100;
+
+            const session = await stripe.checkout.sessions.create({
+                line_items: [
+                    {
+                        price_data: {
+                            currency: 'usd',
+                            unit_amount: amount,
+                            product_data: {
+                                name: serviceInfo?.serviceName,
+                                images: [serviceInfo?.serviceImage]
+
+                            },
+                        },
+                        quantity: 1,
+                    }
+
+                ],
+                metadata: {
+                    serviceId: serviceInfo._id,
+                    trakingId: serviceInfo.trakingId
+                },
+                mode: 'payment',
+                customer_email: serviceInfo.customerEmail,
+                success_url: `${process.env.STYLEDECOR_DOMAIN}/dashboard/payment-success`,
+                cancel_url: `${process.env.STYLEDECOR_DOMAIN}/dashboard/my-bookings`
+            })
+            res.send(session.url)
         })
 
 
