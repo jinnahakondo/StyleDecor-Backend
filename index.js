@@ -162,13 +162,14 @@ async function run() {
         //--------decorators Related apis--------
         //get all decorators
         app.get('/decorators', async (req, res) => {
-            const result = await decoratorColl.find().toArray();
+            const result = await decoratorColl.find().limit(5).toArray();
             res.send(result)
         })
 
         //add a decorator
         app.post('/decorators', async (req, res) => {
             const newDecorator = req.body;
+            newDecorator.status = 'pending';
             const result = await decoratorColl.insertOne(newDecorator);
             res.send(result)
         })
