@@ -166,6 +166,13 @@ async function run() {
             res.send(result)
         })
 
+        //add a decorator
+        app.post('/decorators', async (req, res) => {
+            const newDecorator = req.body;
+            const result = await decoratorColl.insertOne(newDecorator);
+            res.send(result)
+        })
+
         //--------bookings Related apis--------
         //get bookings
         app.get('/bookings', async (req, res) => {
