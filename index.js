@@ -111,14 +111,16 @@ async function run() {
         })
 
         //update user role
-        app.patch('/users/:id', async (req, res) => {
-            const { id } = req.params;
-            const role = req.body;
+        app.patch('/users/:email', async (req, res) => {
+            const { email } = req.params;
+            const { role } = req.body;
             const update = {
-                $set: role
+                $set: { role }
             }
-            const result = await usersColl.updateOne({ _id: new ObjectId(id) }, update);
+
+            const result = await usersColl.updateOne({ email }, update);
             res.send(result)
+
         })
 
         //--------servie Related apis--------
@@ -160,9 +162,15 @@ async function run() {
         })
 
         //--------decorators Related apis--------
+        //get top decorators
+        app.get('/decorators/home', async (req, res) => {
+            const result = await decoratorColl.find().limit(5).toArray();
+            res.send(result)
+        })
+
         //get all decorators
         app.get('/decorators', async (req, res) => {
-            const result = await decoratorColl.find().limit(5).toArray();
+            const result = await decoratorColl.find().toArray();
             res.send(result)
         })
 
@@ -171,6 +179,23 @@ async function run() {
             const newDecorator = req.body;
             newDecorator.status = 'pending';
             const result = await decoratorColl.insertOne(newDecorator);
+            res.send(result)
+        })
+        //update decorator
+        app.patch('/decorators/:email', async (req, res) => {
+            const { email } = req.params;
+            const { status } = req.body;
+            const update = {
+                $set: { status }
+            }
+            const result = await decoratorColl.updateOne({ email }, update)
+            res.send(result)
+        })
+
+        //delete a decorator
+        app.delete('/decorators/:email', async (req, res) => {
+            const { email } = req.params;
+            const result = await decoratorColl.deleteOne({ email })
             res.send(result)
         })
 
