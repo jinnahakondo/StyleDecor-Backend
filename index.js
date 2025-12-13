@@ -172,20 +172,13 @@ async function run() {
         app.get('/decorators', async (req, res) => {
             const { category, district } = req.query;
             if (category && district) {
-                const query = { category, district }
+                const query = { category, district, status: 'approved' }
                 const result = await decoratorColl.find(query).toArray();
                 return res.send(result)
             }
-            const result = await decoratorColl.find().toArray();
+            const result = await decoratorColl.find().sort().toArray();
             res.send(result)
         })
-        // app.get("/decoratos/assign", async (req, res) => {
-        //     const { category, district } = req.query;
-        //     console.log(category, district);
-        //     const query = { category, district }
-        //     const result = await decoratorColl.find(query).toArray();
-        //     res.send(result)
-        // })
 
         //add a decorator
         app.post('/decorators', async (req, res) => {
