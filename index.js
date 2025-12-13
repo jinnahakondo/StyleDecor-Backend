@@ -198,6 +198,19 @@ async function run() {
             res.send(result)
         })
 
+        //asign decorator 
+        app.patch('/asign/decorator/:id', async (req, res) => {
+            const { id } = req.params;
+            const { workingStatus } = req.body;
+            const update = {
+                $set: {
+                    workingStatus
+                }
+            }
+            const result = await decoratorColl.updateOne({ _id: new ObjectId(id) }, update)
+            res.send(result)
+        })
+
         //delete a decorator
         app.delete('/decorators/:email', async (req, res) => {
             const { email } = req.params;
@@ -208,7 +221,7 @@ async function run() {
         //--------bookings Related apis--------
         //get bookings
         app.get('/bookings', async (req, res) => {
-            const result = await bookingColl.find().toArray()
+            const result = await bookingColl.find({ paymentStatus: { $nin: ["pending"] } }).toArray()
             res.send(result)
         })
 
