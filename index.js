@@ -170,9 +170,22 @@ async function run() {
 
         //get all decorators
         app.get('/decorators', async (req, res) => {
+            const { category, district } = req.query;
+            if (category && district) {
+                const query = { category, district }
+                const result = await decoratorColl.find(query).toArray();
+                return res.send(result)
+            }
             const result = await decoratorColl.find().toArray();
             res.send(result)
         })
+        // app.get("/decoratos/assign", async (req, res) => {
+        //     const { category, district } = req.query;
+        //     console.log(category, district);
+        //     const query = { category, district }
+        //     const result = await decoratorColl.find(query).toArray();
+        //     res.send(result)
+        // })
 
         //add a decorator
         app.post('/decorators', async (req, res) => {
