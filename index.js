@@ -126,7 +126,7 @@ async function run() {
         //--------servie Related apis--------
         //get all services
         app.get('/services', async (req, res) => {
-            const result = await serviceColl.find().toArray()
+            const result = await serviceColl.find().sort({createdAt:-1}).toArray()
             res.send(result)
         })
 
