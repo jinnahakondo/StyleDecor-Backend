@@ -77,6 +77,7 @@ async function run() {
         const serviceColl = StyleDecor.collection('services')
         const decoratorColl = StyleDecor.collection('decorators')
         const bookingColl = StyleDecor.collection('bookings')
+        const assignedBookingColl = StyleDecor.collection('assignedBookings')
         const paymentColl = StyleDecor.collection('payments')
 
         // apis here 
@@ -161,7 +162,40 @@ async function run() {
             res.send(result)
         })
 
-        //--------decorators Related apis--------
+        //-------assigned bookings Related apis--------
+        //get assigned bookings
+        app.get('/assigned-bookings/:email', async (req, res) => {
+            const { email } = req.params;
+            const result = await assignedBookingColl.find({ decoratorEmail: email }).toArray();
+            res.send(result)
+        })
+
+        //get assigned bookings today
+        app.get('/assigned-bookings/today/:email', async (req, res) => {
+            const { email } = req.params;
+            const query = { decoratorEmail: email, bookingDate: new Date().toISOString().split('T')[0] }
+            const result = await assignedBookingColl.find(query).toArray();
+            res.send(result)
+        })
+        //update assigned bookings 
+        app.patch('/assigned-bookings/:id', async (req, res) => {
+            const { id } = req.params;
+
+            const { status } = req.body;
+            const update = {
+                $set: { status }
+            }
+            const result = await assignedBookingColl.updateOne({ _id: new ObjectId(id) }, update)
+            res.send(result)
+        })
+
+        //post assigned bookings
+        app.post('/assigned-bookings', async (req, res) => {
+            const assignedBookingInfo = req.body;
+            console.log(assignedBookingInfo);
+            const result = await assignedBookingColl.insertOne(assignedBookingInfo)
+            res.send(result)
+        })
         //get top decorators
         app.get('/decorators/home', async (req, res) => {
             const result = await decoratorColl.find().limit(5).toArray();
@@ -259,12 +293,22 @@ async function run() {
             res.send(result)
         })
 
+        //update a booking status
+        app.patch('/bookings/update-status/:serviceId', async (req, res) => {
+            const { serviceId } = req.params;
+            const { status } = req.body;
+            const update = {
+                $set: { status }
+            }
+            const result = await bookingColl.updateOne({ serviceId }, update)
+            res.send(result)
+        })
+
         //--------PAYMENT RELATED APIS--------
         // checkout session 
         app.post('/create-checkout-session', async (req, res) => {
             const serviceInfo = req.body;
             const amount = Number(serviceInfo.price) * 100;
-
             const session = await stripe.checkout.sessions.create({
                 line_items: [
                     {
