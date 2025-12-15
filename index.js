@@ -126,7 +126,7 @@ async function run() {
         //--------servie Related apis--------
         //get all services
         app.get('/services', async (req, res) => {
-            const result = await serviceColl.find().sort({createdAt:-1}).toArray()
+            const result = await serviceColl.find().sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
 
@@ -176,7 +176,8 @@ async function run() {
                 const result = await decoratorColl.find(query).toArray();
                 return res.send(result)
             }
-            const result = await decoratorColl.find().sort().toArray();
+            const query = { status: { $in: ['pending', 'approved'] } }
+            const result = await decoratorColl.find(query).sort().toArray();
             res.send(result)
         })
 
@@ -247,6 +248,17 @@ async function run() {
             res.send(result)
         })
 
+        //update a booking
+        app.patch('/bookings/:id', async (req, res) => {
+            const { id } = req.params;
+            const updateInfo = req.body;
+            const update = {
+                $set: { ...updateInfo }
+            }
+            const result = await bookingColl.updateOne({ _id: new ObjectId(id) }, update)
+            res.send(result)
+        })
+
         //--------PAYMENT RELATED APIS--------
         // checkout session 
         app.post('/create-checkout-session', async (req, res) => {
@@ -257,7 +269,7 @@ async function run() {
                 line_items: [
                     {
                         price_data: {
-                            currency: 'usd',
+                            currency: 'bdt',
                             unit_amount: amount,
                             product_data: {
                                 name: serviceInfo?.title,
