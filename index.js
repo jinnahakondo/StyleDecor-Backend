@@ -79,6 +79,7 @@ async function run() {
         const bookingColl = StyleDecor.collection('bookings')
         const assignedBookingColl = StyleDecor.collection('assignedBookings')
         const paymentColl = StyleDecor.collection('payments')
+        const trackingColl = StyleDecor.collection('trackings')
 
         // apis here 
 
@@ -86,7 +87,7 @@ async function run() {
         // add user role 
         app.post('/users', async (req, res) => {
             const user = req.body;
-            console.log(user);
+            // console.log(user);
             const isExist = await usersColl.findOne({ email: user?.email })
             if (isExist) {
                 res.send({ message: "user already exist" })
@@ -166,6 +167,7 @@ async function run() {
         //get assigned bookings
         app.get('/assigned-bookings/:email', async (req, res) => {
             const { email } = req.params;
+            console.log('from assigned project',email);
             const result = await assignedBookingColl.find({ decoratorEmail: email }).toArray();
             res.send(result)
         })
@@ -192,7 +194,7 @@ async function run() {
         //post assigned bookings
         app.post('/assigned-bookings', async (req, res) => {
             const assignedBookingInfo = req.body;
-            console.log(assignedBookingInfo);
+            // console.log(assignedBookingInfo);
             const result = await assignedBookingColl.insertOne(assignedBookingInfo)
             res.send(result)
         })
@@ -362,7 +364,7 @@ async function run() {
                 }
 
                 const serviceUpdateResult = await bookingColl.updateOne({ _id: new ObjectId(serviceId) }, update)
-                console.log(serviceUpdateResult);
+                // console.log(serviceUpdateResult);
 
                 //payments info
                 const paymentInfo = {
@@ -385,6 +387,30 @@ async function run() {
         app.get('/payment-history/:email', async (req, res) => {
             const { email } = req.params;
             const result = await paymentColl.find({ customerEmail: email }).toArray()
+            res.send(result)
+        })
+
+        //--------trackings related apis------
+        // get trakckings 
+        app.get('trackings/:bookingId', async (req, res) => {
+            const { bookingId } = req.params;
+            const result = await trackingColl.find({ serviceId: bookingId }).toArray()
+            res.send(result)
+        })
+
+        //add trackings
+        app.post('/trackings', async (req, res) => {
+            const newTracking = req.body;
+            const result = await trackingColl.insertOne(newTracking);
+            res.send(result)
+        })
+
+        //update trackings
+        app.patch('/trackings/:id', async (req, res) => {
+            const { id } = req.params;
+            const { status } = req.body;
+            const update = { $addToSet: { trackingStatus } }
+            const result = await trackingColl.updateOne({ _id: new ObjectId(id) }, update)
             res.send(result)
         })
 
