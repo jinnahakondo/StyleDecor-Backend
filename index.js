@@ -167,7 +167,7 @@ async function run() {
         //get assigned bookings
         app.get('/assigned-bookings/:email', async (req, res) => {
             const { email } = req.params;
-            console.log('from assigned project',email);
+            console.log('from assigned project', email);
             const result = await assignedBookingColl.find({ decoratorEmail: email }).toArray();
             res.send(result)
         })
@@ -409,8 +409,9 @@ async function run() {
         app.patch('/trackings/:id', async (req, res) => {
             const { id } = req.params;
             const { status } = req.body;
-            const update = { $addToSet: { trackingStatus } }
-            const result = await trackingColl.updateOne({ _id: new ObjectId(id) }, update)
+            console.log(status);
+            const update = { $addToSet: { trackingStatus: status } }
+            const result = await trackingColl.updateOne({ serviceId: id }, update)
             res.send(result)
         })
 
