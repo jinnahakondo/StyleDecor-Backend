@@ -131,6 +131,11 @@ async function run() {
             const result = await serviceColl.find().sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
+        //get home page services
+        app.get('/services/home', async (req, res) => {
+            const result = await serviceColl.find().limit(8).sort({ createdAt: -1 }).toArray()
+            res.send(result)
+        })
 
         //get a single service
         app.get('/services/:id', async (req, res) => {
@@ -168,7 +173,8 @@ async function run() {
         app.get('/assigned-bookings/:email', async (req, res) => {
             const { email } = req.params;
             console.log('from assigned project', email);
-            const result = await assignedBookingColl.find({ decoratorEmail: email }).toArray();
+            const result = await assignedBookingColl.find({ decoratorEmail: email })
+                .sort({ status: 1 }).toArray();
             res.send(result)
         })
 
@@ -348,6 +354,8 @@ async function run() {
             const trackingId = session.metadata.trakingId;
             const transectionId = session.payment_intent;
 
+
+
             // check that is already paid?
             const alreadyPaid = await paymentColl.findOne({ transectionId })
             if (alreadyPaid) {
@@ -379,6 +387,7 @@ async function run() {
                 }
                 const paymentRes = await paymentColl.insertOne(paymentInfo)
 
+
                 res.send({ serviceUpdateResult, paymentRes })
             }
         })
@@ -391,6 +400,15 @@ async function run() {
         })
 
         //--------trackings related apis------
+        //get singel tracking
+        app.get('/track-service/:trakingId', async (req, res) => {
+            const { trakingId } = req.params;
+            console.log(trakingId);
+            const result = await trackingColl.findOne({ trakingId })
+            console.log(result);
+            res.send(result)
+        })
+
         // get trakckings 
         app.get('trackings/:bookingId', async (req, res) => {
             const { bookingId } = req.params;
