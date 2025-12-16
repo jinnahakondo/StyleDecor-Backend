@@ -394,7 +394,7 @@ async function run() {
         // get trakckings 
         app.get('trackings/:bookingId', async (req, res) => {
             const { bookingId } = req.params;
-            const result = await trackingColl.find({ serviceId: bookingId }).toArray()
+            const result = await trackingColl.find({ trakingId: bookingId }).toArray()
             res.send(result)
         })
 
@@ -411,7 +411,7 @@ async function run() {
             const { status } = req.body;
             console.log(status);
             const update = { $addToSet: { trackingStatus: status } }
-            const result = await trackingColl.updateOne({ serviceId: id }, update)
+            const result = await trackingColl.updateOne({ trakingId: id }, update)
             res.send(result)
         })
 
