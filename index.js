@@ -364,7 +364,7 @@ async function run() {
             // check that is already paid?
             const alreadyPaid = await paymentColl.findOne({ transectionId })
             if (alreadyPaid) {
-                return res.send({ status: "already paid" })
+                return res.send({ status: "already paid", trackingId, transectionId: session.payment_intent })
             }
             if (session.payment_status === 'paid') {
                 const serviceId = session.metadata.serviceId;
@@ -393,7 +393,7 @@ async function run() {
                 const paymentRes = await paymentColl.insertOne(paymentInfo)
 
 
-                res.send({ serviceUpdateResult, paymentRes })
+                res.send({ serviceUpdateResult, paymentRes, trackingId, transectionId: session.payment_intent })
             }
         })
 
