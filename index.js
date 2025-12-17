@@ -135,7 +135,7 @@ async function run() {
             const result = await serviceColl.find(query).toArray()
             res.send(result)
         })
-        
+
         //get home page services
         app.get('/services/home', async (req, res) => {
             const result = await serviceColl.find().limit(8).sort({ createdAt: -1 }).toArray()
@@ -321,7 +321,7 @@ async function run() {
         // checkout session 
         app.post('/create-checkout-session', async (req, res) => {
             const serviceInfo = req.body;
-            const amount = Number(serviceInfo.price) * 100;
+            const amount = Number(serviceInfo.totalPrice) * 100;
             const session = await stripe.checkout.sessions.create({
                 line_items: [
                     {
