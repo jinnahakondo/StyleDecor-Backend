@@ -128,9 +128,14 @@ async function run() {
         //--------servie Related apis--------
         //get all services
         app.get('/services', async (req, res) => {
-            const result = await serviceColl.find().sort({ createdAt: -1 }).toArray()
+            const { searchText } = req.query;
+            const query = searchText
+                ? { title: { $regex: searchText, $options: 'i' } }
+                : {}
+            const result = await serviceColl.find(query).toArray()
             res.send(result)
         })
+        
         //get home page services
         app.get('/services/home', async (req, res) => {
             const result = await serviceColl.find().limit(8).sort({ createdAt: -1 }).toArray()
