@@ -87,7 +87,7 @@ async function run() {
         // add user role 
         app.post('/users', async (req, res) => {
             const user = req.body;
-            // console.log(user);
+
             const isExist = await usersColl.findOne({ email: user?.email })
             if (isExist) {
                 res.send({ message: "user already exist" })
@@ -149,10 +149,10 @@ async function run() {
             res.send(result)
         })
 
-        // post a serviec 
+        // post a service 
         app.post('/services', async (req, res) => {
-            const serviec = req.body;
-            const result = await serviceColl.insertOne(serviec);
+            const service = req.body;
+            const result = await serviceColl.insertOne(service);
             res.send(result)
         })
         //update a service
@@ -174,14 +174,6 @@ async function run() {
         })
 
         //-------assigned bookings Related apis--------
-        //get assigned bookings
-        // app.get('/assigned-bookings/:email', async (req, res) => {
-        //     const { email } = req.params;
-        //     console.log('from assigned project', email);
-        //     const result = await assignedBookingColl.find({ decoratorEmail: email })
-        //         .sort({ status: 1 }).toArray();
-        //     res.send(result)
-        // })
 
         app.get('/assigned-bookings/:email', async (req, res) => {
             const { email } = req.params;
@@ -231,7 +223,6 @@ async function run() {
                 const total = Number(assignedBooking.totalPrice);
 
                 update.$set.decoratorIncome = total * 0.8;
-                update.$set.adminIncome = total * 0.2;
                 update.$set.completedAt = new Date();
             }
 
@@ -247,7 +238,6 @@ async function run() {
         //post assigned bookings
         app.post('/assigned-bookings', async (req, res) => {
             const assignedBookingInfo = req.body;
-            // console.log(assignedBookingInfo);
             const result = await assignedBookingColl.insertOne(assignedBookingInfo)
             res.send(result)
         })
@@ -341,7 +331,7 @@ async function run() {
         //add booking in bookings
         app.post('/bookings', async (req, res) => {
             const booking = req.body;
-            booking.trakingId = generateTrackingId();
+            booking.trackingId = generateTrackingId();
             const result = await bookingColl.insertOne(booking);
             res.send(result)
         })
@@ -371,6 +361,15 @@ async function run() {
             const update = {
                 $set: { status }
             }
+            if (status === "Completed") {
+                const booking = await bookingColl.findOne({ serviceId })
+                if (!booking) {
+                    res.status(404).send({ message: 'booking not found' })
+                }
+
+                update.$set.adminIncome = Number(booking.totalPrice) * 0.2;
+                update.$set.completedAt = new Date();
+            }
             const result = await bookingColl.updateOne({ serviceId }, update)
             res.send(result)
         })
@@ -388,7 +387,6 @@ async function run() {
                             unit_amount: amount,
                             product_data: {
                                 name: serviceInfo?.title,
-                                description: serviceInfo.description,
                                 images: [serviceInfo?.image]
 
                             },
@@ -400,7 +398,7 @@ async function run() {
                 metadata: {
                     serviceName: serviceInfo?.title,
                     serviceId: serviceInfo._id,
-                    trakingId: serviceInfo.trakingId
+                    trackingId: serviceInfo.trackingId
                 },
                 mode: 'payment',
                 customer_email: serviceInfo.customerEmail,
@@ -414,10 +412,8 @@ async function run() {
         app.patch('/payment-success', async (req, res) => {
             const { sessionId } = req.body;
             const session = await stripe.checkout.sessions.retrieve(sessionId);
-            const trackingId = session.metadata.trakingId;
+            const trackingId = session.metadata.trackingId;
             const transectionId = session.payment_intent;
-
-
 
             // check that is already paid?
             const alreadyPaid = await paymentColl.findOne({ transectionId })
@@ -435,7 +431,6 @@ async function run() {
                 }
 
                 const serviceUpdateResult = await bookingColl.updateOne({ _id: new ObjectId(serviceId) }, update)
-                // console.log(serviceUpdateResult);
 
                 //payments info
                 const paymentInfo = {
@@ -464,18 +459,16 @@ async function run() {
 
         //--------trackings related apis------
         //get singel tracking
-        app.get('/track-service/:trakingId', async (req, res) => {
-            const { trakingId } = req.params;
-            console.log(trakingId);
-            const result = await trackingColl.findOne({ trakingId })
-            console.log(result);
+        app.get('/track-service/:trackingId', async (req, res) => {
+            const { trackingId: trackingId } = req.params;
+            const result = await trackingColl.findOne({ trackingId: trackingId })
             res.send(result)
         })
 
         // get trakckings 
-        app.get('trackings/:bookingId', async (req, res) => {
-            const { bookingId } = req.params;
-            const result = await trackingColl.find({ trakingId: bookingId }).toArray()
+        app.get('/trackings/:trackingId', async (req, res) => {
+            const { trackingId } = req.params;
+            const result = await trackingColl.find({ trackingId }).toArray()
             res.send(result)
         })
 
@@ -487,12 +480,11 @@ async function run() {
         })
 
         //update trackings
-        app.patch('/trackings/:id', async (req, res) => {
-            const { id } = req.params;
+        app.patch('/trackings/:trackingId', async (req, res) => {
+            const { trackingId } = req.params;
             const { status } = req.body;
-            console.log(status);
             const update = { $addToSet: { trackingStatus: status } }
-            const result = await trackingColl.updateOne({ trakingId: id }, update)
+            const result = await trackingColl.updateOne({ trackingId }, update)
             res.send(result)
         })
 
