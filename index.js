@@ -175,10 +175,26 @@ async function run() {
 
         //-------assigned bookings Related apis--------
         //get assigned bookings
+        // app.get('/assigned-bookings/:email', async (req, res) => {
+        //     const { email } = req.params;
+        //     console.log('from assigned project', email);
+        //     const result = await assignedBookingColl.find({ decoratorEmail: email })
+        //         .sort({ status: 1 }).toArray();
+        //     res.send(result)
+        // })
+
         app.get('/assigned-bookings/:email', async (req, res) => {
             const { email } = req.params;
-            console.log('from assigned project', email);
-            const result = await assignedBookingColl.find({ decoratorEmail: email })
+            const { status } = req.query;
+
+            const query = {}
+            if (status) {
+                query.status = status;
+            }
+            if (email) {
+                query.decoratorEmail = email;
+            }
+            const result = await assignedBookingColl.find(query)
                 .sort({ status: 1 }).toArray();
             res.send(result)
         })
@@ -193,14 +209,40 @@ async function run() {
         //update assigned bookings 
         app.patch('/assigned-bookings/:id', async (req, res) => {
             const { id } = req.params;
-
             const { status } = req.body;
+
             const update = {
                 $set: { status }
+            };
+
+            if (status === 'Completed') {
+                const assignedBooking = await assignedBookingColl.findOne({
+                    _id: new ObjectId(id)
+                });
+
+                if (!assignedBooking) {
+                    return res.status(404).send({ message: 'Booking not found' });
+                }
+
+                if (assignedBooking.status === 'Completed') {
+                    return res.send({ message: 'Already Completed' });
+                }
+
+                const total = Number(assignedBooking.totalPrice);
+
+                update.$set.decoratorIncome = total * 0.8;
+                update.$set.adminIncome = total * 0.2;
+                update.$set.completedAt = new Date();
             }
-            const result = await assignedBookingColl.updateOne({ _id: new ObjectId(id) }, update)
-            res.send(result)
-        })
+
+            const result = await assignedBookingColl.updateOne(
+                { _id: new ObjectId(id) },
+                update
+            );
+
+            res.send(result);
+        });
+
 
         //post assigned bookings
         app.post('/assigned-bookings', async (req, res) => {
@@ -209,6 +251,22 @@ async function run() {
             const result = await assignedBookingColl.insertOne(assignedBookingInfo)
             res.send(result)
         })
+
+        // get assigend books status 
+        app.get('/assigned-books/status', async (req, res) => {
+            const pipeline = [
+                {
+                    $group: {
+                        _id: "$status",
+                        count: { $sum: 1 }
+                    }
+                }
+            ]
+            const result = await assignedBookingColl.aggregate(pipeline).toArray()
+            res.send(result)
+        })
+
+
         //get top decorators
         app.get('/decorators/home', async (req, res) => {
             const result = await decoratorColl.find().limit(5).toArray();
