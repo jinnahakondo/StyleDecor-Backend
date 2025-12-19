@@ -314,7 +314,7 @@ async function run() {
         app.patch('/decorators/:email', async (req, res) => {
             const { email } = req.params;
             const { status, workingStatus } = req.body;
-            
+
             const update = {}
             if (status) {
                 update.$set = { status }
@@ -484,10 +484,23 @@ async function run() {
             }
         })
 
-        //payment history
+        //payment history customer
         app.get('/payment-history/:email', async (req, res) => {
             const { email } = req.params;
             const result = await paymentColl.find({ customerEmail: email }).sort({ createdAt: -1 }).toArray()
+            res.send(result)
+        })
+
+        //get earnings admin
+        app.get('/total-earnings/admin', async (req, res) => {
+            const query = { paymentType: 'earning' }
+            const result = await paymentColl.find(query).sort({ createdAt: -1 }).toArray()
+            res.send(result)
+        })
+        //add earnings 
+        app.post('/total-earnings', async (req, res) => {
+            const decoratorEarningInfo = req.body;
+            const result = await paymentColl.insertOne(decoratorEarningInfo)
             res.send(result)
         })
 
