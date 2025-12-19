@@ -187,7 +187,7 @@ async function run() {
                 query.decoratorEmail = email;
             }
             const result = await assignedBookingColl.find(query)
-                .sort({ status: 1 }).toArray();
+                .sort({ createdAt: -1 }).toArray();
             res.send(result)
         })
 
@@ -205,7 +205,7 @@ async function run() {
                 query.decoratorEmail = email;
             }
             const result = await assignedBookingColl.find(query)
-                .sort({ status: 1 }).toArray();
+                .sort({ createdAt: -1 }).toArray();
             res.send(result)
         })
 
@@ -351,7 +351,7 @@ async function run() {
         //--------bookings Related apis--------
         //get bookings
         app.get('/bookings', async (req, res) => {
-            const result = await bookingColl.find({ paymentStatus: { $nin: ["pending"] } }).toArray()
+            const result = await bookingColl.find({ paymentStatus: { $nin: ["pending"] } }).sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
 
@@ -491,6 +491,13 @@ async function run() {
             res.send(result)
         })
 
+        //get earnings history decorator
+        app.get('/total-earnings/decorator/:decoratorEmail', async (req, res) => {
+            const { decoratorEmail } = req.params;
+            const query = { paymentType: 'earning', decoratorEmail, paymentStatus: 'paid' }
+            const result = await paymentColl.find(query).sort({ createdAt: -1 }).toArray()
+            res.send(result)
+        })
         //get earnings admin
         app.get('/total-earnings/admin', async (req, res) => {
             const query = { paymentType: 'earning' }
@@ -501,6 +508,17 @@ async function run() {
         app.post('/total-earnings', async (req, res) => {
             const decoratorEarningInfo = req.body;
             const result = await paymentColl.insertOne(decoratorEarningInfo)
+            res.send(result)
+        })
+        //add earnings 
+        app.patch('/total-earnings/admin/update/:bookingId', async (req, res) => {
+            const { bookingId } = req.params;
+            const updateInfo = req.body;
+            const query = { paymentType: 'earning', bookingId }
+            const update = ({
+                $set: updateInfo
+            })
+            const result = await paymentColl.updateOne(query, update)
             res.send(result)
         })
 
