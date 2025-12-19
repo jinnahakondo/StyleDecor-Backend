@@ -88,13 +88,8 @@ async function run() {
         //middlewere
         //verify admin
         const verifyAdmin = async (req, res, next) => {
-            let email;
-            if (req.params.email) {
-                email = req.params.email
-            }
-            if (req.query.email) {
-                email = req.query.email;
-            }
+
+            const email = req.token_email;
 
             const user = await usersColl.findOne({ email })
             if (!user) {
@@ -108,13 +103,9 @@ async function run() {
 
         //verify decorator
         const verifyDecorator = async (req, res, next) => {
-            let email;
-            if (req.params.email) {
-                email = req.params.email
-            }
-            if (req.query.email) {
-                email = req.query.email;
-            }
+
+            const email = req.token_email;
+
             const user = await usersColl.findOne({ email })
             if (!user) {
                 return res.status(404).send({ message: 'user not found' })
@@ -131,9 +122,8 @@ async function run() {
         // add user role 
         app.post('/users', async (req, res) => {
             const { email } = req.body;
-            // if (email !== req.token_email) {
-            //     return res.status(403).send({ message: 'forbidden access' })
-            // }
+            const user = req.body;
+
             const isExist = await usersColl.findOne({ email })
             if (isExist) {
                 res.send({ message: "user already exist" })
@@ -356,8 +346,25 @@ async function run() {
         })
 
 
-        //update decorator
-        app.patch('/decorators/:email', verifyFBToken, async (req, res) => {
+        //can update decorator
+        app.patch('/decorators/update/:email', verifyFBToken, verifyDecorator, async (req, res) => {
+            const { email } = req.params;
+            const { status, workingStatus } = req.body;
+
+            const update = { $set: {} }
+            if (status) {
+                update.$set.status = status;
+            }
+
+            if (workingStatus) {
+                update.$set.workingStatus = workingStatus;
+            }
+
+            const result = await decoratorColl.updateOne({ email }, update)
+            res.send(result)
+        })
+        //can update admin
+        app.patch('/decorators/:email', verifyFBToken, verifyAdmin, async (req, res) => {
             const { email } = req.params;
             const { status, workingStatus } = req.body;
 
@@ -426,6 +433,14 @@ async function run() {
         //delete a single booking
         app.delete('/bookings/delete/:id', verifyFBToken, async (req, res) => {
             const { id } = req.params;
+            const booking = await bookingColl.findOne({ _id: new ObjectId(id) })
+            if (!booking) {
+                return res.status(404).send({ message: 'booking not found' })
+            }
+            if (req.token_email !== booking.customerEmail) {
+                return res.status(403).send({ message: 'forbidden' })
+            }
+
             const result = await bookingColl.deleteOne({ _id: new ObjectId(id) })
             res.send(result)
         })
