@@ -30,12 +30,12 @@ const verifyFBToken = async (req, res, next) => {
     const { authorization } = req.headers;
 
     if (!authorization) {
-        res.status(401).send({ message: 'unAuthorized Access' })
+        return res.status(401).send({ message: 'unAuthorized Access' })
     }
 
     const token = authorization.split(' ')[1]
     if (!token) {
-        res.status(401).send({ message: 'unAuthorized Access' })
+        return res.status(401).send({ message: 'unAuthorized Access' })
     }
 
     try {
@@ -191,11 +191,29 @@ async function run() {
             res.send(result)
         })
 
+        //assigned bookings status assigned but  !completed
+        app.get('/assigned-bookings/decorator-earnings-pending/:email', async (req, res) => {
+            const { email } = req.params;
+
+            const query = {
+                status: {
+                    $nin: ["pending", "Completed"]
+                }
+            }
+
+            if (email) {
+                query.decoratorEmail = email;
+            }
+            const result = await assignedBookingColl.find(query)
+                .sort({ status: 1 }).toArray();
+            res.send(result)
+        })
+
         //get assigned bookings today
         app.get('/assigned-bookings/today/:email', async (req, res) => {
             const { email } = req.params;
             const query = { decoratorEmail: email, bookingDate: new Date().toISOString().split('T')[0] }
-            const result = await assignedBookingColl.find(query).toArray();
+            const result = await assignedBookingColl.find(query).sort({ createdAt: -1 }).toArray();
             res.send(result)
         })
         //update assigned bookings 
@@ -286,10 +304,17 @@ async function run() {
         //update decorator
         app.patch('/decorators/:email', async (req, res) => {
             const { email } = req.params;
-            const { status } = req.body;
-            const update = {
-                $set: { status }
+            const { status, workingStatus } = req.body;
+
+            const update = {}
+            if (status) {
+                update.$set = { status }
             }
+
+            if (workingStatus) {
+                update.$set = { workingStatus }
+            }
+
             const result = await decoratorColl.updateOne({ email }, update)
             res.send(result)
         })
@@ -324,7 +349,7 @@ async function run() {
         //get a single bookings
         app.get('/bookings/:email', async (req, res) => {
             const { email } = req.params;
-            const result = await bookingColl.find({ customerEmail: email }).toArray()
+            const result = await bookingColl.find({ customerEmail: email }).sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
 
@@ -453,7 +478,7 @@ async function run() {
         //payment history
         app.get('/payment-history/:email', async (req, res) => {
             const { email } = req.params;
-            const result = await paymentColl.find({ customerEmail: email }).toArray()
+            const result = await paymentColl.find({ customerEmail: email }).sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
 
