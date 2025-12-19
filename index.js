@@ -301,11 +301,20 @@ async function run() {
             const result = await decoratorColl.insertOne(newDecorator);
             res.send(result)
         })
+
+        //get a decorator 
+        app.get('/decorator/:email', async (req, res) => {
+            const { email } = req.params;
+            const result = await decoratorColl.findOne({ email })
+            res.send(result)
+        })
+
+
         //update decorator
         app.patch('/decorators/:email', async (req, res) => {
             const { email } = req.params;
             const { status, workingStatus } = req.body;
-
+            
             const update = {}
             if (status) {
                 update.$set = { status }
