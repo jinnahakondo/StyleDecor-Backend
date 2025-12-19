@@ -263,8 +263,8 @@ async function run() {
             res.send(result)
         })
         //update assigned bookings 
-        app.patch('/assigned-bookings/:id', verifyFBToken, verifyDecorator, async (req, res) => {
-            const { id } = req.params;
+        app.patch('/assigned-bookings/:bookingId', verifyFBToken, verifyDecorator, async (req, res) => {
+            const { bookingId } = req.params;
             const { status } = req.body;
 
             const update = {
@@ -273,7 +273,7 @@ async function run() {
 
             if (status === 'Completed') {
                 const assignedBooking = await assignedBookingColl.findOne({
-                    _id: new ObjectId(id)
+                    _id: new ObjectId(bookingId)
                 });
 
                 if (!assignedBooking) {
@@ -291,7 +291,7 @@ async function run() {
             }
 
             const result = await assignedBookingColl.updateOne(
-                { _id: new ObjectId(id) },
+                { _id: new ObjectId(bookingId) },
                 update
             );
 
@@ -442,7 +442,7 @@ async function run() {
         })
 
         //update a booking status
-        app.patch('/bookings/update-status/:serviceId', verifyFBToken, async (req, res) => {
+        app.patch('/bookings/update-status/:serviceId', verifyFBToken, verifyDecorator, async (req, res) => {
             const { serviceId } = req.params;
             const { status } = req.body;
             const update = {
@@ -548,9 +548,9 @@ async function run() {
         })
 
         //get earnings history decorator
-        app.get('/total-earnings/decorator/:decoratorEmail', verifyFBToken, async (req, res) => {
-            const { decoratorEmail } = req.params;
-            const query = { paymentType: 'earning', decoratorEmail, paymentStatus: 'paid' }
+        app.get('/total-earnings/decorator/:email', verifyFBToken, verifyDecorator, async (req, res) => {
+            const { email } = req.params;
+            const query = { paymentType: 'earning', decoratorEmail: email, paymentStatus: 'paid' }
             const result = await paymentColl.find(query).sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
@@ -605,7 +605,7 @@ async function run() {
         })
 
         //update trackings
-        app.patch('/trackings/:trackingId', async (req, res) => {
+        app.patch('/trackings/:trackingId', verifyFBToken, verifyDecorator, async (req, res) => {
             const { trackingId } = req.params;
             const { status } = req.body;
             const update = { $addToSet: { trackingStatus: status } }
