@@ -43,10 +43,13 @@ const verifyFBToken = async (req, res, next) => {
         req.token_email = decoded.email;
         next()
     } catch (error) {
-        res.send(error)
+        return res.status(401).send({ message: 'unAuthorized Access' })
+
     }
 
 }
+
+
 
 const port = process.env.PORT || 3000
 
@@ -81,14 +84,57 @@ async function run() {
         const paymentColl = StyleDecor.collection('payments')
         const trackingColl = StyleDecor.collection('trackings')
 
+
+        //middlewere
+        //verify admin
+        const verifyAdmin = async (req, res, next) => {
+            let email;
+            if (req.params.email) {
+                email = req.params.email
+            }
+            if (req.query.email) {
+                email = req.query.email;
+            }
+
+            const user = await usersColl.findOne({ email })
+            if (!user) {
+                return res.status(404).send({ message: 'user not found' })
+            }
+            if (user.role !== 'admin') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next()
+        }
+
+        //verify decorator
+        const verifyDecorator = async (req, res, next) => {
+            let email;
+            if (req.params.email) {
+                email = req.params.email
+            }
+            if (req.query.email) {
+                email = req.query.email;
+            }
+            const user = await usersColl.findOne({ email })
+            if (!user) {
+                return res.status(404).send({ message: 'user not found' })
+            }
+            if (user.role !== 'decorator') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next()
+        }
+
         // apis here 
 
         //--------user Related apis--------
         // add user role 
         app.post('/users', async (req, res) => {
-            const user = req.body;
-
-            const isExist = await usersColl.findOne({ email: user?.email })
+            const { email } = req.body;
+            // if (email !== req.token_email) {
+            //     return res.status(403).send({ message: 'forbidden access' })
+            // }
+            const isExist = await usersColl.findOne({ email })
             if (isExist) {
                 res.send({ message: "user already exist" })
             }
@@ -150,13 +196,13 @@ async function run() {
         })
 
         // post a service 
-        app.post('/services', async (req, res) => {
+        app.post('/services', verifyFBToken, verifyAdmin, async (req, res) => {
             const service = req.body;
             const result = await serviceColl.insertOne(service);
             res.send(result)
         })
         //update a service
-        app.patch('/services/:id', async (req, res) => {
+        app.patch('/services/:id', verifyFBToken, verifyAdmin, async (req, res) => {
             const { id } = req.params;
             const updateInfo = req.body;
             const update = {
@@ -167,7 +213,7 @@ async function run() {
         })
 
         //delete a servies
-        app.delete('/services/:id', async (req, res) => {
+        app.delete('/services/:id', verifyFBToken, verifyAdmin, async (req, res) => {
             const { id } = req.params;
             const result = await serviceColl.deleteOne({ _id: new ObjectId(id) })
             res.send(result)
@@ -175,7 +221,7 @@ async function run() {
 
         //-------assigned bookings Related apis--------
 
-        app.get('/assigned-bookings/:email', async (req, res) => {
+        app.get('/assigned-bookings/:email', verifyFBToken, verifyDecorator, async (req, res) => {
             const { email } = req.params;
             const { status } = req.query;
 
@@ -192,7 +238,7 @@ async function run() {
         })
 
         //assigned bookings status assigned but  !completed
-        app.get('/assigned-bookings/decorator-earnings-pending/:email', async (req, res) => {
+        app.get('/assigned-bookings/decorator-earnings-pending/:email', verifyFBToken, verifyDecorator, async (req, res) => {
             const { email } = req.params;
 
             const query = {
@@ -210,14 +256,14 @@ async function run() {
         })
 
         //get assigned bookings today
-        app.get('/assigned-bookings/today/:email', async (req, res) => {
+        app.get('/assigned-bookings/today/:email', verifyFBToken, verifyDecorator, async (req, res) => {
             const { email } = req.params;
             const query = { decoratorEmail: email, bookingDate: new Date().toISOString().split('T')[0] }
             const result = await assignedBookingColl.find(query).sort({ createdAt: -1 }).toArray();
             res.send(result)
         })
         //update assigned bookings 
-        app.patch('/assigned-bookings/:id', async (req, res) => {
+        app.patch('/assigned-bookings/:id', verifyFBToken, verifyDecorator, async (req, res) => {
             const { id } = req.params;
             const { status } = req.body;
 
@@ -254,14 +300,14 @@ async function run() {
 
 
         //post assigned bookings
-        app.post('/assigned-bookings', async (req, res) => {
+        app.post('/assigned-bookings', verifyFBToken, verifyAdmin, async (req, res) => {
             const assignedBookingInfo = req.body;
             const result = await assignedBookingColl.insertOne(assignedBookingInfo)
             res.send(result)
         })
 
         // get assigend books status 
-        app.get('/assigned-books/status', async (req, res) => {
+        app.get('/assigned-books/status', verifyFBToken, verifyDecorator, async (req, res) => {
             const pipeline = [
                 {
                     $group: {
@@ -282,7 +328,7 @@ async function run() {
         })
 
         //get all decorators
-        app.get('/decorators', async (req, res) => {
+        app.get('/decorators', verifyFBToken, verifyAdmin, async (req, res) => {
             const { category, district } = req.query;
             if (category && district) {
                 const query = { category, district, status: 'approved' }
@@ -295,7 +341,7 @@ async function run() {
         })
 
         //add a decorator
-        app.post('/decorators', async (req, res) => {
+        app.post('/decorators', verifyFBToken, verifyAdmin, async (req, res) => {
             const newDecorator = req.body;
             newDecorator.status = 'pending';
             const result = await decoratorColl.insertOne(newDecorator);
@@ -311,7 +357,7 @@ async function run() {
 
 
         //update decorator
-        app.patch('/decorators/:email', async (req, res) => {
+        app.patch('/decorators/:email', verifyFBToken, async (req, res) => {
             const { email } = req.params;
             const { status, workingStatus } = req.body;
 
@@ -329,7 +375,7 @@ async function run() {
         })
 
         //asign decorator 
-        app.patch('/asign/decorator/:id', async (req, res) => {
+        app.patch('/asign/decorator/:id', verifyFBToken, verifyAdmin, async (req, res) => {
             const { id } = req.params;
             const { workingStatus } = req.body;
             const update = {
@@ -342,28 +388,35 @@ async function run() {
         })
 
         //delete a decorator
-        app.delete('/decorators/:email', async (req, res) => {
+        app.delete('/decorators/:email', verifyFBToken, verifyAdmin, async (req, res) => {
             const { email } = req.params;
             const result = await decoratorColl.deleteOne({ email })
             res.send(result)
         })
 
         //--------bookings Related apis--------
-        //get bookings
-        app.get('/bookings', async (req, res) => {
+        //get not pending bookings 
+        app.get('/bookings', verifyFBToken, verifyAdmin, async (req, res) => {
             const result = await bookingColl.find({ paymentStatus: { $nin: ["pending"] } }).sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
 
-        //get a single bookings
-        app.get('/bookings/:email', async (req, res) => {
+        //get bookings for a user
+        app.get('/bookings/:email', verifyFBToken, async (req, res) => {
             const { email } = req.params;
+            if (email !== req.token_email) {
+                return res.status(403).status({ message: 'forbidden access' })
+            }
             const result = await bookingColl.find({ customerEmail: email }).sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
 
         //add booking in bookings
-        app.post('/bookings', async (req, res) => {
+        app.post('/bookings', verifyFBToken, async (req, res) => {
+            const { email } = req.query;
+            if (email !== req.token_email) {
+                return res.status(403).send({ message: 'forbidden ' })
+            }
             const booking = req.body;
             booking.trackingId = generateTrackingId();
             const result = await bookingColl.insertOne(booking);
@@ -371,14 +424,14 @@ async function run() {
         })
 
         //delete a single booking
-        app.delete('/bookings/delete/:id', async (req, res) => {
+        app.delete('/bookings/delete/:id', verifyFBToken, async (req, res) => {
             const { id } = req.params;
             const result = await bookingColl.deleteOne({ _id: new ObjectId(id) })
             res.send(result)
         })
 
         //update a booking
-        app.patch('/bookings/:id', async (req, res) => {
+        app.patch('/bookings/:id', verifyFBToken, verifyAdmin, async (req, res) => {
             const { id } = req.params;
             const updateInfo = req.body;
             const update = {
@@ -389,7 +442,7 @@ async function run() {
         })
 
         //update a booking status
-        app.patch('/bookings/update-status/:serviceId', async (req, res) => {
+        app.patch('/bookings/update-status/:serviceId', verifyFBToken, async (req, res) => {
             const { serviceId } = req.params;
             const { status } = req.body;
             const update = {
@@ -485,33 +538,36 @@ async function run() {
         })
 
         //payment history customer
-        app.get('/payment-history/:email', async (req, res) => {
+        app.get('/payment-history/:email', verifyFBToken, async (req, res) => {
             const { email } = req.params;
+            if (email !== req.token_email) {
+                return res.status(403).send({ message: "forbidden access" })
+            }
             const result = await paymentColl.find({ customerEmail: email }).sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
 
         //get earnings history decorator
-        app.get('/total-earnings/decorator/:decoratorEmail', async (req, res) => {
+        app.get('/total-earnings/decorator/:decoratorEmail', verifyFBToken, async (req, res) => {
             const { decoratorEmail } = req.params;
             const query = { paymentType: 'earning', decoratorEmail, paymentStatus: 'paid' }
             const result = await paymentColl.find(query).sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
         //get earnings admin
-        app.get('/total-earnings/admin', async (req, res) => {
+        app.get('/total-earnings/admin/:email', verifyFBToken, verifyAdmin, async (req, res) => {
             const query = { paymentType: 'earning' }
             const result = await paymentColl.find(query).sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
         //add earnings 
-        app.post('/total-earnings', async (req, res) => {
+        app.post('/total-earnings', verifyFBToken, async (req, res) => {
             const decoratorEarningInfo = req.body;
             const result = await paymentColl.insertOne(decoratorEarningInfo)
             res.send(result)
         })
         //add earnings 
-        app.patch('/total-earnings/admin/update/:bookingId', async (req, res) => {
+        app.patch('/total-earnings/admin/update/:bookingId', verifyFBToken, verifyAdmin, async (req, res) => {
             const { bookingId } = req.params;
             const updateInfo = req.body;
             const query = { paymentType: 'earning', bookingId }
@@ -538,7 +594,11 @@ async function run() {
         })
 
         //add trackings
-        app.post('/trackings', async (req, res) => {
+        app.post('/trackings', verifyFBToken, async (req, res) => {
+            const { email } = req.query;
+            if (req.token_email !== email) {
+                return res.status(403).send({ message: 'forbidden' })
+            }
             const newTracking = req.body;
             const result = await trackingColl.insertOne(newTracking);
             res.send(result)
