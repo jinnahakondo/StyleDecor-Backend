@@ -488,6 +488,23 @@ async function run() {
             res.send(result)
         })
 
+
+        //get service booking count category wise
+        app.get('/booking-count-by-category', async (req, res) => {
+            const pipeline = [
+                {
+                    $group: {
+                        _id: '$category',
+                        count: { $sum: 1 }
+                    }
+                }
+            ]
+            const result = await bookingColl.aggregate(pipeline).toArray()
+
+            res.send(result)
+        })
+
+
         //--------PAYMENT RELATED APIS--------
         // checkout session 
         app.post('/create-checkout-session', async (req, res) => {
