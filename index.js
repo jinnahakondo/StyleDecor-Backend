@@ -490,7 +490,7 @@ async function run() {
 
 
         //get service booking count category wise
-        app.get('/booking-count-by-category', async (req, res) => {
+        app.get('/booking-count-by-category', verifyFBToken, verifyAdmin, async (req, res) => {
             const pipeline = [
                 {
                     $group: {
@@ -588,6 +588,26 @@ async function run() {
                 return res.status(403).send({ message: "forbidden access" })
             }
             const result = await paymentColl.find({ customerEmail: email }).sort({ createdAt: -1 }).toArray()
+            res.send(result)
+        })
+
+        //get weekly bookins per day
+        app.get('/weekly-bookings/per-day', async (req, res) => {
+            const today = new Date();
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(today.getDate() - 7)
+            const pipeline = [
+                { $match: { createdAt: { $gte: sevenDaysAgo.toISOString() } } },
+                {
+                    $group: {
+                        _id: { $substr: ["$createdAt", 0, 10] },
+                        count: { $sum: 1 },
+                        totalRevinew: { $sum: "$adminIncome" }
+                    },
+                }
+            ]
+            const result = await bookingColl.aggregate(pipeline).toArray()
+
             res.send(result)
         })
 
