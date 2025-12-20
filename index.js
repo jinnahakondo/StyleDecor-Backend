@@ -621,7 +621,7 @@ async function run() {
         //get earnings admin
         app.get('/total-earnings/admin/:email', verifyFBToken, verifyAdmin, async (req, res) => {
             const query = { paymentType: 'earning' }
-            const result = await paymentColl.find(query).project({ _id: 1, adminEarning: 1, }).toArray()
+            const result = await paymentColl.find(query).toArray()
             res.send(result)
         })
         //add earnings 
