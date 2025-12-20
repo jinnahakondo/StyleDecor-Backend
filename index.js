@@ -317,6 +317,12 @@ async function run() {
             res.send(result)
         })
 
+        //get top decorators
+        app.get('/total-decorators', verifyFBToken, verifyAdmin, async (req, res) => {
+            const result = await decoratorColl.find().toArray();
+            res.send(result)
+        })
+
         //get all decorators
         app.get('/decorators', verifyFBToken, verifyAdmin, async (req, res) => {
             const { category, district } = req.query;
@@ -402,6 +408,12 @@ async function run() {
         })
 
         //--------bookings Related apis--------
+        //get all bookings 
+        app.get('/all-bookings', verifyFBToken, verifyAdmin, async (req, res) => {
+            const result = await bookingColl.find().project({ _id: 1 }).toArray()
+            res.send(result)
+        })
+
         //get not pending bookings 
         app.get('/bookings', verifyFBToken, verifyAdmin, async (req, res) => {
             const result = await bookingColl.find({ paymentStatus: { $nin: ["pending"] } }).sort({ createdAt: -1 }).toArray()
@@ -563,16 +575,53 @@ async function run() {
         })
 
         //get earnings history decorator
+        //get monthly total earning
+        // app.get('/monthly-total-earnings/decorator/:email', async (req, res) => {
+        //     const { email } = req.params;
+        //     const pipeline = [
+        //         // stage 1
+        //         {
+        //             $match: {
+        //                 paymentType: 'earning',
+        //                 decoratorEmail: email,
+        //                 paymentStatus: 'paid'
+        //             }
+        //         },
+        //         {
+        //             $group: {
+        //                 _id: {
+        //                     year: { $year: { $dateFromString: { dateString: "$paidAt" } } },
+        //                     month: { $month: { $dateFromString: { dateString: "$paidAt" } } }
+        //                 },
+        //                 totalEarnings: { $sum: "$decoratorEarning" }
+        //             }
+        //         }
+        //     ]
+
+        //     const result = await paymentColl.aggregate(pipeline).toArray();
+        //     res.send(result);
+        // })
+
+        //total earning
         app.get('/total-earnings/decorator/:email', verifyFBToken, verifyDecorator, async (req, res) => {
             const { email } = req.params;
             const query = { paymentType: 'earning', decoratorEmail: email, paymentStatus: 'paid' }
-            const result = await paymentColl.find(query).sort({ createdAt: -1 }).toArray()
+            const result = await paymentColl.find(query).project({ adminEarning: 0 }).sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
+
+        //pending earning
+        app.get('/pending-earnings/decorator/:email', verifyFBToken, verifyDecorator, async (req, res) => {
+            const { email } = req.params;
+            const query = { paymentType: 'earning', decoratorEmail: email, paymentStatus: 'pending' }
+            const result = await paymentColl.find(query).project({ adminEarning: 0 }).sort({ createdAt: -1 }).toArray()
+            res.send(result)
+        })
+
         //get earnings admin
         app.get('/total-earnings/admin/:email', verifyFBToken, verifyAdmin, async (req, res) => {
             const query = { paymentType: 'earning' }
-            const result = await paymentColl.find(query).sort({ createdAt: -1 }).toArray()
+            const result = await paymentColl.find(query).project({ _id: 1, adminEarning: 1, }).toArray()
             res.send(result)
         })
         //add earnings 
