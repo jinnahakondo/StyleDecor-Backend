@@ -12,7 +12,10 @@ app.use(express.json())
 
 // firebase 
 const admin = require("firebase-admin");
-const serviceAccount = require("./styledecor-firebase-adminsdk.json");
+
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8')
+const serviceAccount = JSON.parse(decoded);
+
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
 });
@@ -73,7 +76,7 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
 
-        await client.connect();
+        // await client.connect();
 
         const StyleDecor = client.db('StyleDecor');
         const usersColl = StyleDecor.collection('users');
@@ -429,6 +432,15 @@ async function run() {
             const result = await bookingColl.find({ customerEmail: email }).sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
+        //get all completed bookings 
+        app.get('/bookings/completed/:email', verifyFBToken, async (req, res) => {
+            const { email } = req.params;
+            if (email !== req.token_email) {
+                return res.status(403).status({ message: 'forbidden access' })
+            }
+            const result = await bookingColl.find({ customerEmail: email, status: "Completed" }).sort({ createdAt: -1 }).toArray()
+            res.send(result)
+        })
 
         //add booking in bookings
         app.post('/bookings', verifyFBToken, async (req, res) => {
@@ -592,7 +604,7 @@ async function run() {
         })
 
         //get weekly bookins per day
-        app.get('/weekly-bookings/per-day', async (req, res) => {
+        app.get('/weekly-bookings/per-day', verifyFBToken, verifyAdmin, async (req, res) => {
             const today = new Date();
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(today.getDate() - 7)
@@ -601,7 +613,7 @@ async function run() {
                 {
                     $group: {
                         _id: { $substr: ["$createdAt", 0, 10] },
-                        count: { $sum: 1 },
+                        totalBooking: { $sum: 1 },
                         totalRevinew: { $sum: "$adminIncome" }
                     },
                 }
@@ -612,32 +624,7 @@ async function run() {
         })
 
         //get earnings history decorator
-        //get monthly total earning
-        // app.get('/monthly-total-earnings/decorator/:email', async (req, res) => {
-        //     const { email } = req.params;
-        //     const pipeline = [
-        //         // stage 1
-        //         {
-        //             $match: {
-        //                 paymentType: 'earning',
-        //                 decoratorEmail: email,
-        //                 paymentStatus: 'paid'
-        //             }
-        //         },
-        //         {
-        //             $group: {
-        //                 _id: {
-        //                     year: { $year: { $dateFromString: { dateString: "$paidAt" } } },
-        //                     month: { $month: { $dateFromString: { dateString: "$paidAt" } } }
-        //                 },
-        //                 totalEarnings: { $sum: "$decoratorEarning" }
-        //             }
-        //         }
-        //     ]
 
-        //     const result = await paymentColl.aggregate(pipeline).toArray();
-        //     res.send(result);
-        // })
 
         //total earning
         app.get('/total-earnings/decorator/:email', verifyFBToken, verifyDecorator, async (req, res) => {
@@ -715,8 +702,8 @@ async function run() {
         })
 
 
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
