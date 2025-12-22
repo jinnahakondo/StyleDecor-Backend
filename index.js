@@ -334,13 +334,13 @@ async function run() {
                 const result = await decoratorColl.find(query).toArray();
                 return res.send(result)
             }
-            const query = { status: { $in: ['pending', 'approved'] } }
-            const result = await decoratorColl.find(query).sort().toArray();
+            // const query = { status: { $in: ['pending', 'approved'] } }
+            const result = await decoratorColl.find().sort({ createdAt: -1 }).toArray();
             res.send(result)
         })
 
         //add a decorator
-        app.post('/decorators', verifyFBToken, verifyAdmin, async (req, res) => {
+        app.post('/decorators', verifyFBToken, async (req, res) => {
             const newDecorator = req.body;
             newDecorator.status = 'pending';
             const result = await decoratorColl.insertOne(newDecorator);
@@ -393,6 +393,7 @@ async function run() {
         //asign decorator 
         app.patch('/asign/decorator/:id', verifyFBToken, verifyAdmin, async (req, res) => {
             const { id } = req.params;
+
             const { workingStatus } = req.body;
             const update = {
                 $set: {
@@ -400,6 +401,20 @@ async function run() {
                 }
             }
             const result = await decoratorColl.updateOne({ _id: new ObjectId(id) }, update)
+            res.send(result)
+        })
+        app.patch('/update-decorator-status/:email', verifyFBToken, verifyAdmin, async (req, res) => {
+            const { email } = req.params;
+
+            const { status } = req.body;
+
+            const update = {
+                $set: {
+                    status
+                }
+            }
+
+            const result = await decoratorColl.updateOne({ email }, update)
             res.send(result)
         })
 
@@ -645,7 +660,7 @@ async function run() {
         //get earnings admin
         app.get('/total-earnings/admin/:email', verifyFBToken, verifyAdmin, async (req, res) => {
             const query = { paymentType: 'earning' }
-            const result = await paymentColl.find(query).toArray()
+            const result = await paymentColl.find(query).sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
         //add earnings 
