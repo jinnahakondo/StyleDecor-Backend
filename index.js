@@ -444,7 +444,7 @@ async function run() {
             if (email !== req.token_email) {
                 return res.status(403).status({ message: 'forbidden access' })
             }
-            const result = await bookingColl.find({ customerEmail: email }).sort({ createdAt: -1 }).toArray()
+            const result = await bookingColl.find({ customerEmail: email, status: { $nin: ["completed"] } }).sort({ createdAt: -1 }).toArray()
             res.send(result)
         })
         //get all completed bookings 
@@ -622,7 +622,7 @@ async function run() {
         app.get('/weekly-bookings/per-day', verifyFBToken, verifyAdmin, async (req, res) => {
             const today = new Date();
             const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(today.getDate() - 7)
+            sevenDaysAgo.setDate(today.getDate() - 30)
             const pipeline = [
                 { $match: { createdAt: { $gte: sevenDaysAgo.toISOString() } } },
                 {
